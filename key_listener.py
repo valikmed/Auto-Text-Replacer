@@ -1,8 +1,10 @@
-import time
 import os
-import pyperclip
+import keyboard
+import datetime
 
 FILE_PATH = r"C:\\Users\\Valentyn\\Documents\\Python\\data.txt"  # Update this path
+
+typed_word = ""
 
 def get_value_from_file(key: str, file_path: str) -> str | None:
     """Searches for a key in the file and returns its corresponding value."""
@@ -14,26 +16,37 @@ def get_value_from_file(key: str, file_path: str) -> str | None:
             if "=" in line:
                 k, v = line.strip().split("=", 1)
                 if k == key:
+                    # Special case: Convert date format
+                    if k == "data":
+                        try:
+                            date_obj = datetime.datetime.strptime(v, "%d/%m/%Y")
+                            return date_obj.strftime("%Y-%m-%d")  # Convert to YYYY-MM-DD
+                        except ValueError:
+                            return None
                     return v  # Return the value if key matches
     return None  # Key not found
 
-def monitor_clipboard():
-    """Continuously checks clipboard content and replaces recognized keys automatically."""
-    last_clipboard = ""
+def on_key_press(event):
+    global typed_word
 
-    print("🔄 Monitoring clipboard... Copy a key, and it will be replaced automatically!")
-
-    while True:
-        time.sleep(1)  # Check every second to reduce CPU usage
-        clipboard_content = pyperclip.paste()
-
-        if clipboard_content != last_clipboard:  # Check if clipboard has changed
-            last_clipboard = clipboard_content
-            value = get_value_from_file(clipboard_content, FILE_PATH)
-
+    if event.event_type == "down":  # Only process keypress events
+        if event.name == "space":  
+            value = get_value_from_file(typed_word, FILE_PATH)  # Get replacement value
             if value:
-                pyperclip.copy(value)  # Replace clipboard content with the found value
-                print(f"✅ Replaced '{clipboard_content}' with '{value}' (Copied to clipboard)")
+                for _ in range(len(typed_word) + 1):  # Remove typed key + space
+                    keyboard.send("backspace")
+                keyboard.write(value + " ")  # Replace with correct value and space
+                print(f"✅ Replaced '{typed_word}' with '{value}'")
+            typed_word = ""  # Reset after replacement
+        
+        elif event.name == "backspace":  
+            typed_word = typed_word[:-1]  # Remove last character
+        
+        elif len(event.name) == 1:  # Only add normal characters (not special keys)
+            typed_word += event.name  
 
-if __name__ == "__main__":
-    monitor_clipboard()
+# Start listening for keyboard input
+keyboard.on_press(on_key_press)
+
+print("🔄 Listening for typed words... Type a key and press space to replace it.")
+keyboard.wait()  # Keep the script running
