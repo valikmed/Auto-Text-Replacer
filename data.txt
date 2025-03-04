@@ -1,4 +1,0 @@
-username=Valentyn
-mdv=Medvediuk
-data=24/06/2001
-year=2025
